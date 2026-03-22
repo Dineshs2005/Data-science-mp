@@ -1,0 +1,415 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Cybersecurity Threat Prediction — ML Project</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
+
+<style>
+/* ── Variables ─────────────────────────────────────── */
+:root{
+  --red:     #DC2626;
+  --red-dk:  #991B1B;
+  --red-lt:  #FEF2F2;
+  --orange:  #EA580C;
+  --orange-lt:#FFF7ED;
+  --amber:   #D97706;
+  --green:   #16A34A;
+  --green-lt:#DCFCE7;
+  --blue:    #2563EB;
+  --blue-lt: #EFF6FF;
+  --purple:  #7C3AED;
+  --purple-lt:#F5F3FF;
+  --teal:    #0D9488;
+  --sky:     #0EA5E9;
+  --bg:      #0F172A;
+  --bg2:     #1E293B;
+  --bg3:     #334155;
+  --white:   #FFFFFF;
+  --border:  #334155;
+  --text:    #F1F5F9;
+  --muted:   #94A3B8;
+  --light:   #1E293B;
+  --sh1: 0 1px 3px rgba(0,0,0,.3);
+  --sh2: 0 4px 16px rgba(0,0,0,.4);
+  --sh3: 0 12px 40px rgba(0,0,0,.5);
+  --r: 14px;
+}
+
+/* ── Reset ─────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+
+/* ── Hero ─────────────────────────────────────────── */
+.hero{
+  background:linear-gradient(135deg,#0F172A 0%,#1A0A0A 30%,#450A0A 65%,#DC2626 100%);
+  color:#fff; padding:0; overflow:hidden; position:relative;
+}
+.hero::before{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(220,38,38,.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(220,38,38,.06) 1px,transparent 1px);
+  background-size:52px 52px;
+}
+/* scanning line animation */
+.scan-line{
+  position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg,transparent,rgba(220,38,38,.7),transparent);
+  animation:scan 3s linear infinite;
+}
+@keyframes scan{0%{top:0}100%{top:100%}}
+
+/* Floating particles */
+.particle{
+  position:absolute; border-radius:50%;
+  background:rgba(220,38,38,.3); pointer-events:none;
+  animation:float-p 6s ease-in-out infinite;
+}
+@keyframes float-p{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-20px) scale(1.2)}}
+
+.hero-inner{
+  position:relative;z-index:2;
+  max-width:1180px;margin:0 auto;
+  padding:56px 24px 90px;
+  display:flex;align-items:center;gap:48px;flex-wrap:wrap;
+}
+.hero-text{flex:1;min-width:280px}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);
+  border-radius:999px;font-size:.75rem;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 16px;margin-bottom:18px;color:rgba(255,255,255,.9);
+}
+.hero-title{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:clamp(2rem,5vw,3.2rem);font-weight:700;line-height:1.1;margin-bottom:14px;
+}
+.hero-title span{color:#FCA5A5}
+.hero-sub{font-size:.98rem;opacity:.78;line-height:1.7;max-width:500px;font-weight:300}
+.hero-stats{display:flex;gap:28px;margin-top:26px;flex-wrap:wrap}
+.hstat .val{font-family:'Space Grotesk',sans-serif;font-size:1.75rem;font-weight:700;color:#FCA5A5;display:block}
+.hstat .lbl{font-size:.7rem;opacity:.65;text-transform:uppercase;letter-spacing:.08em}
+
+/* Shield SVG */
+.hero-visual{flex:0 0 auto;width:min(300px,100%)}
+.hero-visual svg{width:100%;animation:float 4s ease-in-out infinite;filter:drop-shadow(0 20px 40px rgba(220,38,38,.4))}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+/* ── Nav Tabs ──────────────────────────────────────── */
+.tabs{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;gap:4px;padding:10px 20px;
+  position:sticky;top:0;z-index:100;
+  overflow-x:auto;box-shadow:var(--sh1);
+}
+.tab{
+  display:flex;align-items:center;gap:6px;white-space:nowrap;
+  background:none;border:1.5px solid transparent;
+  color:var(--muted);font:500 .85rem/1 'Inter',sans-serif;
+  padding:9px 18px;border-radius:9px;cursor:pointer;transition:all .2s;
+}
+.tab:hover{color:var(--text);background:var(--bg3)}
+.tab.on{background:var(--red);color:#fff;border-color:var(--red);
+         box-shadow:0 4px 12px rgba(220,38,38,.4)}
+
+/* ── Page ─────────────────────────────────────────── */
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+.page{display:none}.page.on{display:block}
+
+/* ── Section header ───────────────────────────────── */
+.sec{display:flex;align-items:center;gap:12px;margin:32px 0 18px}
+.sec:first-child{margin-top:0}
+.sec h2{font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:700;white-space:nowrap}
+.sec-line{flex:1;height:1.5px;background:var(--border);border-radius:2px}
+.sec-tag{background:var(--red);color:#fff;font-size:.68rem;font-weight:700;
+         padding:3px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── Card ──────────────────────────────────────────── */
+.card{background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);
+      box-shadow:var(--sh1);padding:22px;transition:box-shadow .2s}
+.card:hover{box-shadow:var(--sh2)}
+.card-h{font-family:'Space Grotesk',sans-serif;font-size:.95rem;font-weight:700;
+        margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text)}
+
+/* ── Grids ─────────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:18px}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+
+/* ── Stat tile ─────────────────────────────────────── */
+.tile{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
+      padding:18px;text-align:center;position:relative;overflow:hidden}
+.tile::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.tile.rd::before{background:var(--red)}
+.tile.og::before{background:var(--orange)}
+.tile.gn::before{background:var(--green)}
+.tile.bl::before{background:var(--blue)}
+.tile.pu::before{background:var(--purple)}
+.tile.te::before{background:var(--teal)}
+.tile .v{font-family:'Space Grotesk',sans-serif;font-size:1.9rem;font-weight:700}
+.tile.rd .v{color:var(--red)}.tile.og .v{color:var(--orange)}.tile.gn .v{color:var(--green)}
+.tile.bl .v{color:var(--blue)}.tile.pu .v{color:var(--purple)}.tile.te .v{color:var(--teal)}
+.tile .l{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:4px}
+
+/* ── Form ──────────────────────────────────────────── */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:14px}
+.field label{display:block;font-size:.72rem;font-weight:700;color:var(--muted);
+             margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select{
+  width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;
+  font:400 .88rem/1 'Inter',sans-serif;background:var(--bg3);color:var(--text);
+  outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.field input:focus,.field select:focus{
+  border-color:var(--red);background:var(--bg2);
+  box-shadow:0 0 0 3px rgba(220,38,38,.15);
+}
+.field select option{background:var(--bg2)}
+
+/* Algorithm chips */
+.alg-wrap{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.alg{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg2);border:2px solid var(--border);
+  color:var(--muted);font:500 .87rem/1 'Inter',sans-serif;
+  padding:10px 20px;border-radius:10px;cursor:pointer;transition:all .2s;
+}
+.alg:hover{border-color:var(--red);color:var(--text)}
+.alg.on{background:#450A0A;border-color:var(--red);color:#fff;
+         box-shadow:0 4px 14px rgba(220,38,38,.3)}
+.alg .dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .2s}
+.alg.on .dot{background:#FCA5A5}
+
+/* ── Buttons ───────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 28px;
+     border:none;border-radius:10px;font:600 .92rem/1 'Inter',sans-serif;
+     cursor:pointer;transition:all .2s}
+.btn-p{background:linear-gradient(135deg,var(--red),var(--red-dk));color:#fff;
+       box-shadow:0 4px 14px rgba(220,38,38,.4)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(220,38,38,.5)}
+.btn-p:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-g{background:var(--bg3);color:var(--text);border:1.5px solid var(--border)}
+.btn-g:hover{border-color:var(--red);color:var(--red)}
+.btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+
+/* ── Loader ────────────────────────────────────────── */
+.loader{display:none;justify-content:center;align-items:center;gap:7px;padding:32px}
+.loader.on{display:flex}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--red);
+     animation:bounce .7s ease-in-out infinite}
+.dot:nth-child(2){animation-delay:.14s}.dot:nth-child(3){animation-delay:.28s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-13px)}}
+
+/* ── Result Box ────────────────────────────────────── */
+.result-box{
+  background:linear-gradient(135deg,#1A0000,#450A0A,#7F1D1D);
+  border:1px solid rgba(220,38,38,.4);
+  border-radius:var(--r);padding:30px;color:#fff;
+  margin-bottom:20px;display:none;position:relative;overflow:hidden;
+}
+.result-box::after{content:'🛡️';position:absolute;right:22px;top:50%;
+  transform:translateY(-50%);font-size:72px;opacity:.12}
+.rl{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;opacity:.65;margin-bottom:7px}
+.rb{font-family:'Space Grotesk',sans-serif;font-size:2.8rem;font-weight:800;line-height:1.05;color:#FCA5A5}
+.ra{font-size:.85rem;opacity:.7;margin-top:6px}
+.best-tag{display:inline-block;background:#FDE047;color:#1A2E05;
+          font-size:.7rem;font-weight:800;padding:3px 11px;
+          border-radius:999px;margin-top:10px}
+
+/* ── Prob bars ─────────────────────────────────────── */
+.prob-row{display:flex;align-items:center;gap:11px;margin-bottom:9px}
+.prob-name{width:150px;font-size:.85rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prob-track{flex:1;height:9px;background:rgba(0,0,0,.2);border-radius:5px;overflow:hidden}
+.prob-fill{height:100%;border-radius:5px;
+  background:linear-gradient(90deg,var(--red),var(--orange));
+  transition:width 1.1s cubic-bezier(.4,0,.2,1)}
+.prob-pct{width:48px;text-align:right;font:600 .8rem 'Space Grotesk',sans-serif;color:var(--muted)}
+
+/* ── Metric bar ────────────────────────────────────── */
+.mrow{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.mname{width:75px;font-size:.75rem;font-weight:700;color:var(--muted);
+       text-transform:uppercase;letter-spacing:.05em}
+.mtrack{flex:1;height:9px;background:var(--bg3);border-radius:5px;overflow:hidden}
+.mfill{height:100%;border-radius:5px;transition:width 1.2s ease}
+.mfill.a{background:linear-gradient(90deg,var(--red),var(--orange))}
+.mfill.p{background:linear-gradient(90deg,var(--green),var(--teal))}
+.mfill.r{background:linear-gradient(90deg,var(--blue),var(--sky))}
+.mfill.f{background:linear-gradient(90deg,var(--purple),#A855F7)}
+.mpct{width:50px;text-align:right;font:700 .82rem 'Space Grotesk',sans-serif}
+
+/* ── Table ─────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.87rem}
+thead th{background:rgba(220,38,38,.1);color:var(--red);font-size:.7rem;
+         text-transform:uppercase;letter-spacing:.08em;font-weight:700;
+         padding:11px 14px;text-align:left;border-bottom:2px solid rgba(220,38,38,.3)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:hover{background:var(--bg3)}
+tbody td{padding:11px 14px;color:var(--muted)}
+tbody td:first-child{font-weight:600;color:var(--text)}
+tbody tr.best td{background:rgba(22,163,74,.1);color:var(--green) !important;font-weight:700 !important}
+.chip{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.8rem;font-weight:600}
+.ch-r{background:rgba(220,38,38,.15);color:#FCA5A5}
+.ch-g{background:rgba(22,163,74,.15);color:#4ADE80}
+.ch-b{background:rgba(37,99,235,.15);color:#93C5FD}
+.ch-p{background:rgba(124,58,237,.15);color:#C4B5FD}
+.best-chip{background:var(--green);color:#fff;font-size:.65rem;font-weight:800;
+           padding:2px 7px;border-radius:999px;margin-left:6px}
+
+/* ── Feature importance ────────────────────────────── */
+.firow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.finame{width:220px;font-size:.8rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.fitrack{flex:1;height:11px;background:var(--bg3);border-radius:6px;overflow:hidden}
+.fifill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--red),var(--orange))}
+.fipct{width:44px;text-align:right;font:600 .76rem 'Space Grotesk',sans-serif;color:var(--muted)}
+
+/* ── Attack info tiles ─────────────────────────────── */
+.binfo{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.btile{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);border-radius:10px;
+       padding:13px 16px;text-align:center;min-width:100px}
+.btile strong{display:block;font-family:'Space Grotesk',sans-serif;font-size:1.05rem;color:#FCA5A5}
+.btile span{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;display:block}
+
+/* ── Chart canvas ──────────────────────────────────── */
+.cw{position:relative;width:100%}
+.cw canvas{max-height:290px}
+
+/* ── Toast ─────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:26px;right:26px;
+  background:var(--green);color:#fff;
+  padding:11px 20px;border-radius:10px;font-size:.87rem;font-weight:500;
+  opacity:0;transform:translateY(14px);transition:all .32s;pointer-events:none;
+  z-index:999;box-shadow:var(--sh2);
+}
+#toast.on{opacity:1;transform:translateY(0)}
+#toast.err{background:var(--red)}
+
+/* ── Footer ────────────────────────────────────────── */
+footer{background:var(--bg2);border-top:1px solid var(--border);
+       text-align:center;padding:22px;font-size:.8rem;color:var(--muted)}
+
+/* ── Responsive ────────────────────────────────────── */
+@media(max-width:640px){
+  .hero-visual{display:none}
+  .hero-title{font-size:1.9rem}
+  .rb{font-size:2rem}
+  .tabs{padding:8px 10px;gap:2px}
+  .tab{padding:7px 12px;font-size:.78rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="scan-line"></div>
+  <div class="particle" style="width:6px;height:6px;top:20%;left:10%;animation-delay:0s"></div>
+  <div class="particle" style="width:4px;height:4px;top:60%;left:80%;animation-delay:2s"></div>
+  <div class="particle" style="width:8px;height:8px;top:40%;left:50%;animation-delay:4s"></div>
+
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="badge">🎓 Data Science Mini Project</div>
+      <h1 class="hero-title">Cybersecurity Threat<br><span>Prediction AI</span></h1>
+      <p class="hero-sub">
+        Predict cyberattack types with <strong style="color:#FCA5A5">100% accuracy</strong>
+        using Random Forest, Extra Trees &amp; Gradient Boosting trained on
+        3,000 global incidents across 10 countries (2015–2024).
+      </p>
+      <div class="hero-stats">
+        <div class="hstat"><span class="val">3,000</span><span class="lbl">Incidents</span></div>
+        <div class="hstat"><span class="val">10</span><span class="lbl">Countries</span></div>
+        <div class="hstat"><span class="val">100%</span><span class="lbl">Accuracy</span></div>
+        <div class="hstat"><span class="val">3</span><span class="lbl">Algorithms</span></div>
+      </div>
+    </div>
+
+    <!-- SVG Shield Illustration -->
+    <div class="hero-visual">
+      <svg viewBox="0 0 380 300" xmlns="http://www.w3.org/2000/svg">
+        <!-- Glow -->
+        <ellipse cx="190" cy="270" rx="130" ry="18" fill="rgba(220,38,38,.25)"/>
+        <!-- Shield body -->
+        <path d="M190 30 L320 80 L320 170 Q320 240 190 280 Q60 240 60 170 L60 80 Z"
+              fill="#1A0505" stroke="#DC2626" stroke-width="3"/>
+        <path d="M190 50 L305 93 L305 168 Q305 228 190 264 Q75 228 75 168 L75 93 Z"
+              fill="#2D0808" stroke="rgba(220,38,38,.35)" stroke-width="1.5"/>
+        <!-- Lock body -->
+        <rect x="158" y="148" width="64" height="54" rx="8" fill="#DC2626"/>
+        <!-- Lock shackle -->
+        <path d="M170 148 L170 133 Q170 115 190 115 Q210 115 210 133 L210 148"
+              fill="none" stroke="#DC2626" stroke-width="9" stroke-linecap="round"/>
+        <!-- Keyhole -->
+        <circle cx="190" cy="170" r="8" fill="#1A0505"/>
+        <rect x="187" y="172" width="6" height="12" rx="2" fill="#1A0505"/>
+        <!-- Circuits -->
+        <line x1="90" y1="100" x2="120" y2="100" stroke="rgba(220,38,38,.4)" stroke-width="1.5"/>
+        <line x1="120" y1="100" x2="120" y2="130" stroke="rgba(220,38,38,.4)" stroke-width="1.5"/>
+        <circle cx="90" cy="100" r="3" fill="#DC2626" opacity=".5"/>
+        <line x1="290" y1="100" x2="260" y2="100" stroke="rgba(220,38,38,.4)" stroke-width="1.5"/>
+        <line x1="260" y1="100" x2="260" y2="130" stroke="rgba(220,38,38,.4)" stroke-width="1.5"/>
+        <circle cx="290" cy="100" r="3" fill="#DC2626" opacity=".5"/>
+        <!-- Decorative dots -->
+        <circle cx="155" cy="230" r="4" fill="#DC2626" opacity=".6"/>
+        <circle cx="190" cy="242" r="5" fill="#FCA5A5" opacity=".6"/>
+        <circle cx="225" cy="230" r="4" fill="#DC2626" opacity=".6"/>
+        <!-- Pulse rings -->
+        <circle cx="190" cy="155" r="55" fill="none" stroke="rgba(220,38,38,.12)" stroke-width="1"/>
+        <circle cx="190" cy="155" r="70" fill="none" stroke="rgba(220,38,38,.07)" stroke-width="1"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TABS
+══════════════════════════════════════════════════════════ -->
+<div class="tabs">
+  <button class="tab on"  onclick="go('predict',this)">🎯 Predict</button>
+  <button class="tab"     onclick="go('overview',this)">📊 Overview</button>
+  <button class="tab"     onclick="go('models',this)">🧠 Models</button>
+  <button class="tab"     onclick="go('charts',this)">📈 Charts</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PAGE 1 — PREDICT
+══════════════════════════════════════════════════════════ -->
+<div id="pg-predict" class="page on">
+<div class="wrap">
+
+  <!-- Algorithm chips -->
+  <div class="sec"><h2>⚙️ Choose Algorithm</h2><div class="sec-line"></div></div>
+  <div class="alg-wrap" id="alg-chips">
+    <button class="alg on" data-alg="Random Forest">
+      <span class="dot"></span>Random Forest <span id="acc-rf" style="font-size:.72rem;opacity:.8"></span>
+    </button>
+    <button class="alg" data-alg="Extra Trees">
+      <span class="dot"></span>Extra Trees <span id="acc-et" style="font-size:.72rem;opacity:.8"></span>
+    </button>
+    <button class="alg" data-alg="Gradient Boosting">
+      <span class="dot"></span>Gradient Boosting <span id="acc-gb" style="font-size:.72rem;opacity:.8"></span>
+    </button>
+  </div>
+
+  <!-- Input form -->
+  <div class="sec"><h2>🔍 Incident Characteristics</h2><div class="sec-line"></div></div>
+  <div class="card">
+    <div class="form-grid">
+
+      <div class="field">
+        <label>Attack ID</label>
+        <select id="f-attack-id">
+          <option value="PH01">PH01 — Phishing</option>
+          <option value="RWS34">RWS34 — Ransomware</option>
+          <option value="MIM65">MIM65 — Man-in-the-Middle</option>
+          <option value="DD678">DD678 — DDoS</option>
+          <option value="SI657">SI657 — SQL Injection</opti
